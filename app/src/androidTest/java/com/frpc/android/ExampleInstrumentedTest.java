@@ -1,4 +1,4 @@
-package com.car.frpc_android;
+package com.frpc.android;
 
 import android.content.Context;
 
