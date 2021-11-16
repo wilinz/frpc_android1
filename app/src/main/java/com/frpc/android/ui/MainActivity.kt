@@ -1,21 +1,22 @@
 package com.frpc.android.ui
 
 import android.Manifest
+import android.Manifest.permission.READ_EXTERNAL_STORAGE
+import android.Manifest.permission.WRITE_EXTERNAL_STORAGE
 import android.content.Intent
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.navigation.Navigation
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.NavigationUI
 import com.afollestad.materialdialogs.MaterialDialog
-import com.frpc.android.Constants
 import com.frpc.android.R
 import com.frpc.android.databinding.ActivityMainBinding
 import com.google.android.material.navigation.NavigationView
-import com.tbruyelle.rxpermissions2.RxPermissions
-import io.reactivex.functions.Consumer
+import com.permissionx.guolindev.PermissionX
 
 class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener {
 
@@ -30,6 +31,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         setContentView(binding.root)
 
         setSupportActionBar(binding.appBarMain.toolbar)
+
         mAppBarConfiguration = AppBarConfiguration.Builder(
             R.id.nav_home
         )
@@ -39,32 +41,18 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         NavigationUI.setupActionBarWithNavController(this, navController, mAppBarConfiguration!!)
         NavigationUI.setupWithNavController(binding.navView, navController)
         binding.navView.setNavigationItemSelectedListener(this)
-        init()
-    }
 
-    private fun init() {
-        checkPermissions(Consumer { aBoolean ->
-            if (!aBoolean!!) {
-                Constants.tendToSettings(this@MainActivity)
-            }
-        })
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
-            R.id.action_new_text -> actionNewText()
+            R.id.action_new_text ->{
+                checkPermissions {
+                    startActivity(Intent(this@MainActivity, IniEditActivity::class.java))
+                }
+            }
         }
         return super.onOptionsItemSelected(item)
-    }
-
-    private fun actionNewText() {
-        checkPermissions { aBoolean: Boolean? ->
-            if (!aBoolean!!) {
-                Constants.tendToSettings(this@MainActivity)
-                return@checkPermissions
-            }
-            startActivity(Intent(this@MainActivity, IniEditActivity::class.java))
-        }
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -78,14 +66,23 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 || super.onSupportNavigateUp())
     }
 
-    private fun checkPermissions(consumer: Consumer<Boolean>) {
-        val subscribe = RxPermissions(this)
-            .request(
-                Manifest.permission.WRITE_EXTERNAL_STORAGE,
-                Manifest.permission.READ_EXTERNAL_STORAGE,
-                Manifest.permission.READ_PHONE_STATE
-            )
-            .subscribe(consumer)
+    private fun checkPermissions(successful: () -> Unit) {
+        PermissionX.init(this)
+            .permissions(READ_EXTERNAL_STORAGE,
+                WRITE_EXTERNAL_STORAGE)
+            .onExplainRequestReason { scope, deniedList ->
+                scope.showRequestReasonDialog(deniedList, "核心基础都是基于这些权限", "确定", "取消")
+            }
+            .onForwardToSettings { scope, deniedList ->
+                scope.showForwardToSettingsDialog(deniedList, "您需要在“设置”中手动授予必要的权限", "确定", "取消")
+            }
+            .request { allGranted, grantedList, deniedList ->
+                if (allGranted) {
+                    successful.invoke()
+                } else {
+                    Toast.makeText(this, "这些权限被拒绝: $deniedList", Toast.LENGTH_LONG).show()
+                }
+            }
     }
 
     override fun onNavigationItemSelected(item: MenuItem): Boolean {

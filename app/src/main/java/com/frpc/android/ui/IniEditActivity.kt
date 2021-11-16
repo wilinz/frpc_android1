@@ -53,7 +53,7 @@ class IniEditActivity : AppCompatActivity() {
             .subscribe(object : Observer<String?> {
                 override fun onSubscribe(d: Disposable) {}
                 override fun onNext(s: String) {
-                    binding.editText.setText(s, 1)
+                    binding.editText.setText(s)
                 }
 
                 override fun onError(e: Throwable) {}
@@ -118,7 +118,7 @@ class IniEditActivity : AppCompatActivity() {
         Observable.create(ObservableOnSubscribe { emitter: ObservableEmitter<File?> ->
             val file = File(Constants.getIniFileParent(this), fileName)
             val writer = FileWriter(file)
-            writer.write(binding.editText.text)
+            writer.write(binding.editText.text.toString())
             writer.close()
             emitter.onNext(file)
             emitter.onComplete()

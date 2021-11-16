@@ -24,14 +24,18 @@
 
     </com.google.android.material.appbar.AppBarLayout>
 
-    <com.github.ahmadaghazadeh.editor.widget.CodeEditor
-        android:id="@+id/editText"
-        app:code="#"
-        app:lang="sh"
-        app:isReadOnly="false"
-        app:isShowExtendedKeyboard="true"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+<!--    <com.github.ahmadaghazadeh.editor.widget.CodeEditor-->
+<!--        android:id="@+id/editText"-->
+<!--        app:code="#"-->
+<!--        app:lang="sh"-->
+<!--        app:isReadOnly="false"-->
+<!--        app:isShowExtendedKeyboard="true"-->
+<!--        android:layout_width="match_parent"-->
+<!--        android:layout_height="match_parent" />-->
 
+    <EditText
+        android:id="@+id/edit_text"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"/>
 
 </LinearLayout>

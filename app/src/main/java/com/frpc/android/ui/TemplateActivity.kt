@@ -36,7 +36,7 @@ class TemplateActivity : AppCompatActivity() {
             .subscribe(object : Observer<String?> {
                 override fun onSubscribe(d: Disposable) {}
                 override fun onNext(s: String) {
-                    binding.editText.setText(s, 1)
+                    binding.editText.setText(s)
                 }
 
                 override fun onError(e: Throwable) {}
