@@ -41,7 +41,7 @@ class FileListAdapter(var list: ArrayList<File>) :
         }
         binding.ivDelete.setOnClickListener {
             MaterialDialog(parent.context).show {
-                title(text = "删除${list[holder.adapterPosition].name}")
+                title(text = list[holder.adapterPosition].name)
                 message(text = "确定要删除此文件")
                 positiveButton(text = "确定") {
                     val position = holder.adapterPosition
@@ -60,6 +60,7 @@ class FileListAdapter(var list: ArrayList<File>) :
                 parent.context.getString(R.string.intent_key_file),
                 list[holder.adapterPosition].path
             )
+            intent.putExtra("isOverwrite",true)
             parent.context.startActivity(intent)
         }
         return holder

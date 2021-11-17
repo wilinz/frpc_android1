@@ -4,9 +4,11 @@ import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Bundle
 import android.text.TextUtils
+import android.util.Log
 import android.view.*
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import com.afollestad.materialdialogs.MaterialDialog
 import com.afollestad.materialdialogs.input.input
 import com.frpc.android.Constants
@@ -14,18 +16,23 @@ import com.frpc.android.R
 import com.frpc.android.databinding.ActivityIniEditBinding
 import io.reactivex.Observable
 import io.reactivex.ObservableEmitter
-import io.reactivex.ObservableOnSubscribe
 import io.reactivex.Observer
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.Disposable
 import io.reactivex.schedulers.Schedulers
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
-import java.io.FileWriter
 
 class IniEditActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityIniEditBinding
     private var file: File? = null
+
+    companion object {
+        private val TAG = javaClass.simpleName
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -34,32 +41,21 @@ class IniEditActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         val filePath = intent.getStringExtra(getString(R.string.intent_key_file))
+
         if (!TextUtils.isEmpty(filePath)) file = File(filePath)
         initToolbar()
         initEdit()
     }
 
     private fun initEdit() {
-        Observable.create { emitter: ObservableEmitter<String?> ->
-            emitter.onNext(
-                if (file != null) Constants.getStringFromFile(file) else Constants.getStringFromRaw(
-                    this@IniEditActivity,
-                    R.raw.frpc
+        lifecycleScope.launch {
+            val text = withContext(Dispatchers.IO) {
+                file?.readText() ?: Constants.getStringFromRaw(
+                    this@IniEditActivity, R.raw.frpc
                 )
-            )
-            emitter.onComplete()
+            }
+            binding.editText.setText(text)
         }
-            .subscribeOn(Schedulers.io())
-            .observeOn(AndroidSchedulers.mainThread())
-            .subscribe(object : Observer<String?> {
-                override fun onSubscribe(d: Disposable) {}
-                override fun onNext(s: String) {
-                    binding.editText.setText(s)
-                }
-
-                override fun onError(e: Throwable) {}
-                override fun onComplete() {}
-            })
     }
 
     private fun initToolbar() {
@@ -82,17 +78,19 @@ class IniEditActivity : AppCompatActivity() {
         return super.onOptionsItemSelected(item)
     }
 
-    fun saveFile(fileName: String, observer: Observer<File?>) {
-        Observable.create(ObservableOnSubscribe { emitter: ObservableEmitter<File?> ->
-            val file = File(Constants.getIniFileParent(this), fileName)
-            val writer = FileWriter(file)
-            writer.write(binding.editText.text.toString())
-            writer.close()
-            emitter.onNext(file)
-            emitter.onComplete()
-        }).subscribeOn(Schedulers.io())
-            .observeOn(AndroidSchedulers.mainThread())
-            .subscribe(observer)
+    private fun saveFile(file: File) {
+        lifecycleScope.launch {
+            Log.i(TAG, "main: ${Thread.currentThread().id}")
+            try {
+                withContext(Dispatchers.IO) {
+                    file.writeText(binding.editText.text.toString())
+                    Log.i(TAG, "io: ${Thread.currentThread().id}")
+                }
+                Toast.makeText(this@IniEditActivity, "保存成功", Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                Toast.makeText(this@IniEditActivity, "保存失败", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
 
@@ -102,42 +100,27 @@ class IniEditActivity : AppCompatActivity() {
             cancelOnTouchOutside(false)
             noAutoDismiss()
             title(if (file == null) R.string.titleInputFileName else R.string.titleModifyFileName)
-            negativeButton(res = R.string.cancel) {
-                positiveButton(text = "确定") {
-
-                }
-                input("", prefill = if (file == null) "" else file!!.name) { dialog, input ->
-
-                    val fileName = if (!input.toString().endsWith(Constants.INI_FILE_SUF)
-                    ) input.toString() + Constants.INI_FILE_SUF else input.toString()
-
-                    saveFile(fileName, object : Observer<File?> {
-                        override fun onSubscribe(d: Disposable) {}
-
-                        override fun onNext(file: File) {
-                            Toast.makeText(
-                                this@IniEditActivity.applicationContext,
-                                R.string.tipSaveSuccess,
-                                Toast.LENGTH_SHORT
-                            ).show()
-                            dialog.dismiss()
-                            finish()
-                        }
-
-                        override fun onError(e: Throwable) {
-                            e.printStackTrace()
-                            Toast.makeText(this@IniEditActivity, e.message, Toast.LENGTH_SHORT)
-                                .show()
-                        }
-
-                        override fun onComplete() {}
-                    })
+            negativeButton(res = R.string.cancel) { dismiss() }
+            positiveButton(text = "确定") {}
+            input("", prefill = if (file == null) "" else file!!.name) { dialog, input ->
+                var filename = input.toString()
+                if (!filename.endsWith(Constants.INI_FILE_SUF)) {
+                    filename += Constants.INI_FILE_SUF
                 }
 
+                val file = File(Constants.getIniFileParent(this@IniEditActivity), filename)
+
+                val isOverwrite = intent.getBooleanExtra("isOverwrite", false)
+                if (file.exists() && !isOverwrite) {
+                    Toast.makeText(this@IniEditActivity, "文件已存在", Toast.LENGTH_SHORT).show()
+                    return@input
+                }
+                saveFile(file)
+                dismiss()
+                finish()
             }
         }
     }
-
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.activity_add_text, menu)

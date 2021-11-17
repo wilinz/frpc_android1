@@ -48,7 +48,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         when (item.itemId) {
             R.id.action_new_text ->{
                 checkPermissions {
-                    startActivity(Intent(this@MainActivity, IniEditActivity::class.java))
+                    val intent=Intent(this@MainActivity, IniEditActivity::class.java)
+                    intent.putExtra("isOverwrite",false)
+                    startActivity(intent)
                 }
             }
         }

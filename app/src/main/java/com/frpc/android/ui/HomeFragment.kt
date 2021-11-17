@@ -131,15 +131,7 @@ class HomeFragment : Fragment() {
             setServiceState(R.color.colorStop, R.drawable.ic_stop_white, R.string.hasOpened)
         }
     }
-//    private fun isServiceRunning(): Boolean {
-//        val manager = getSystemService(ACTIVITY_SERVICE) as ActivityManager?
-//        for (service in manager!!.getRunningServices(Int.MAX_VALUE)) {
-//            if ("com.example.MyNeatoIntentService" == service.service.className) {
-//                return true
-//            }
-//        }
-//        return false
-//    }
+
     fun serviceIsRuning(context: Context?): Boolean {
         val manager = context?.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
         for (service in manager.getRunningServices(Int.MAX_VALUE)) {
