@@ -6,6 +6,7 @@ import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
+import com.afollestad.materialdialogs.MaterialDialog
 import com.frpc.android.R
 import com.frpc.android.databinding.ItemRecyclerMainBinding
 import com.frpc.android.ui.IniEditActivity
@@ -39,15 +40,26 @@ class FileListAdapter(var list: ArrayList<File>) :
             }
         }
         binding.ivDelete.setOnClickListener {
-            val position = holder.adapterPosition
-            list[position].delete()
-            list.removeAt(position)
-            notifyItemRemoved(position)
-            Log.d(TAG, "onCreateViewHolder: size:$itemCount")
+            MaterialDialog(parent.context).show {
+                title(text = "删除${list[holder.adapterPosition].name}")
+                message(text = "确定要删除此文件")
+                positiveButton(text = "确定") {
+                    val position = holder.adapterPosition
+                    list[position].delete()
+                    list.removeAt(position)
+                    notifyItemRemoved(position)
+                    Log.d(TAG, "onCreateViewHolder: size:$itemCount")
+                }
+                negativeButton(text = "取消") { }
+            }
+
         }
         binding.ivEdit.setOnClickListener {
             val intent = Intent(parent.context, IniEditActivity::class.java)
-            intent.putExtra(parent.context.getString(R.string.intent_key_file), list[holder.adapterPosition].path)
+            intent.putExtra(
+                parent.context.getString(R.string.intent_key_file),
+                list[holder.adapterPosition].path
+            )
             parent.context.startActivity(intent)
         }
         return holder
@@ -76,5 +88,5 @@ class FileListAdapter(var list: ArrayList<File>) :
 
     override fun getItemCount(): Int = list.size
 
-    data class ConfigInfo(val name :String, val filepath:String)
+    data class ConfigInfo(val name: String, val filepath: String)
 }

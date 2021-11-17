@@ -101,9 +101,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
     private fun showAbout() {
-        MaterialDialog.Builder(this)
-            .title("Frp 版本")
-            .content("0.33.0")
-            .show()
+        MaterialDialog(this).show {
+            title(text = "Frp 版本")
+            message(text = "0.33.0")
+        }
     }
 }

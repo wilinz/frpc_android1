@@ -1,13 +1,14 @@
 package com.frpc.android.ui
 
+import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Bundle
 import android.text.TextUtils
 import android.view.*
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import com.afollestad.materialdialogs.DialogAction
 import com.afollestad.materialdialogs.MaterialDialog
+import com.afollestad.materialdialogs.input.input
 import com.frpc.android.Constants
 import com.frpc.android.R
 import com.frpc.android.databinding.ActivityIniEditBinding
@@ -81,40 +82,7 @@ class IniEditActivity : AppCompatActivity() {
         return super.onOptionsItemSelected(item)
     }
 
-    private fun actionSave() {
-        MaterialDialog.Builder(this)
-            .title(if (file == null) R.string.titleInputFileName else R.string.titleModifyFileName)
-            .canceledOnTouchOutside(false)
-            .autoDismiss(false)
-            .negativeText(R.string.cancel)
-            .onNegative { dialog: MaterialDialog, which: DialogAction? -> dialog.dismiss() }
-            .input("", if (file == null) "" else file!!.name, false) { dialog, input ->
-                val fileName = if (!input.toString()
-                        .endsWith(Constants.INI_FILE_SUF)
-                ) input.toString() + Constants.INI_FILE_SUF else input.toString()
-                saveFile(fileName, object : Observer<File?> {
-                    override fun onSubscribe(d: Disposable) {}
-                    override fun onNext(file: File) {
-                        Toast.makeText(
-                            this@IniEditActivity.applicationContext,
-                            R.string.tipSaveSuccess,
-                            Toast.LENGTH_SHORT
-                        ).show()
-                        dialog.dismiss()
-                        finish()
-                    }
-
-                    override fun onError(e: Throwable) {
-                        e.printStackTrace()
-                        Toast.makeText(this@IniEditActivity, e.message, Toast.LENGTH_SHORT).show()
-                    }
-
-                    override fun onComplete() {}
-                })
-            }.show()
-    }
-
-    private fun saveFile(fileName: String, observer: Observer<File?>) {
+    fun saveFile(fileName: String, observer: Observer<File?>) {
         Observable.create(ObservableOnSubscribe { emitter: ObservableEmitter<File?> ->
             val file = File(Constants.getIniFileParent(this), fileName)
             val writer = FileWriter(file)
@@ -126,6 +94,50 @@ class IniEditActivity : AppCompatActivity() {
             .observeOn(AndroidSchedulers.mainThread())
             .subscribe(observer)
     }
+
+
+    @SuppressLint("CheckResult")
+    private fun actionSave() {
+        MaterialDialog(this).show {
+            cancelOnTouchOutside(false)
+            noAutoDismiss()
+            title(if (file == null) R.string.titleInputFileName else R.string.titleModifyFileName)
+            negativeButton(res = R.string.cancel) {
+                positiveButton(text = "确定") {
+
+                }
+                input("", prefill = if (file == null) "" else file!!.name) { dialog, input ->
+
+                    val fileName = if (!input.toString().endsWith(Constants.INI_FILE_SUF)
+                    ) input.toString() + Constants.INI_FILE_SUF else input.toString()
+
+                    saveFile(fileName, object : Observer<File?> {
+                        override fun onSubscribe(d: Disposable) {}
+
+                        override fun onNext(file: File) {
+                            Toast.makeText(
+                                this@IniEditActivity.applicationContext,
+                                R.string.tipSaveSuccess,
+                                Toast.LENGTH_SHORT
+                            ).show()
+                            dialog.dismiss()
+                            finish()
+                        }
+
+                        override fun onError(e: Throwable) {
+                            e.printStackTrace()
+                            Toast.makeText(this@IniEditActivity, e.message, Toast.LENGTH_SHORT)
+                                .show()
+                        }
+
+                        override fun onComplete() {}
+                    })
+                }
+
+            }
+        }
+    }
+
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.activity_add_text, menu)
