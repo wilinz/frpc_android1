@@ -1,31 +1,80 @@
 package com.frpc.android.adapter
 
-import android.widget.RadioButton
+import android.content.Intent
+import android.util.Log
+import android.view.LayoutInflater
+import android.view.ViewGroup
+import androidx.core.content.ContextCompat
+import androidx.recyclerview.widget.RecyclerView
 import com.frpc.android.R
-import com.chad.library.adapter.base.BaseQuickAdapter
-import com.chad.library.adapter.base.viewholder.BaseViewHolder
+import com.frpc.android.databinding.ItemRecyclerMainBinding
+import com.frpc.android.ui.IniEditActivity
 import java.io.File
 
-class FileListAdapter : BaseQuickAdapter<File, BaseViewHolder>(R.layout.item_recycler_main) {
-    var selectItem: File? = null
+class FileListAdapter(var list: ArrayList<File>) :
+    RecyclerView.Adapter<FileListAdapter.FileListViewHolder>() {
 
-    fun setSelectItem(selectItem: File?): FileListAdapter {
-        this.selectItem = selectItem
-        notifyDataSetChanged()
-        return this
+    companion object {
+        private val TAG = javaClass.simpleName
     }
 
-    override fun removeAt(position: Int) {
-        val item = getItem(position)
-        if (selectItem != null && item.path == selectItem!!.path) {
-            selectItem = null
+    var currentSelection = -1
+
+    class FileListViewHolder(val binding: ItemRecyclerMainBinding) :
+        RecyclerView.ViewHolder(binding.root)
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): FileListViewHolder {
+
+        val binding =
+            ItemRecyclerMainBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+
+        val holder = FileListViewHolder(binding)
+
+        binding.root.setOnClickListener {
+            if (holder.adapterPosition != currentSelection) {
+                val lastSelection = currentSelection
+                currentSelection = holder.adapterPosition
+                notifyItemChanged(lastSelection)
+                notifyItemChanged(currentSelection)
+            }
         }
-        super.removeAt(position)
+        binding.ivDelete.setOnClickListener {
+            val position = holder.adapterPosition
+            list[position].delete()
+            list.removeAt(position)
+            notifyItemRemoved(position)
+            Log.d(TAG, "onCreateViewHolder: size:$itemCount")
+        }
+        binding.ivEdit.setOnClickListener {
+            val intent = Intent(parent.context, IniEditActivity::class.java)
+            intent.putExtra(parent.context.getString(R.string.intent_key_file), list[holder.adapterPosition].path)
+            parent.context.startActivity(intent)
+        }
+        return holder
     }
 
-    override fun convert(baseViewHolder: BaseViewHolder, file: File) {
-        baseViewHolder.setText(R.id.tv_name, file.name)
-        val btnRadio: RadioButton = baseViewHolder.itemView.findViewById(R.id.btn_radio)
-        btnRadio.isChecked = selectItem != null && selectItem!!.path == file.path
+    override fun onBindViewHolder(holder: FileListViewHolder, position: Int) {
+        Log.d(TAG, "onBindViewHolder: $position")
+        val context = holder.itemView.context
+        holder.binding.tvName.text = list[position].name
+        if (position == currentSelection) {
+            holder.binding.card.setCardBackgroundColor(
+                ContextCompat.getColor(
+                    context,
+                    R.color.colorPrimary
+                )
+            )
+        } else {
+            holder.binding.card.setCardBackgroundColor(
+                ContextCompat.getColor(
+                    context,
+                    R.color.white
+                )
+            )
+        }
     }
+
+    override fun getItemCount(): Int = list.size
+
+    data class ConfigInfo(val name :String, val filepath:String)
 }

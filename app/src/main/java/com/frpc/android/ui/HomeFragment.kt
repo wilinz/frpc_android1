@@ -1,74 +1,65 @@
 package com.frpc.android.ui
 
-import android.Manifest
+import android.annotation.SuppressLint
 import android.app.ActivityManager
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.chad.library.adapter.base.BaseQuickAdapter
 import com.frpc.android.Constants
 import com.frpc.android.FrpcService
 import com.frpc.android.R
 import com.frpc.android.adapter.FileListAdapter
 import com.frpc.android.databinding.FragmentHomeBinding
-import com.tbruyelle.rxpermissions2.RxPermissions
 import io.reactivex.Observable
 import io.reactivex.ObservableEmitter
-import io.reactivex.ObservableOnSubscribe
-import io.reactivex.Observer
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.Disposable
-import io.reactivex.functions.Consumer
 import io.reactivex.schedulers.Schedulers
 import java.io.BufferedReader
 import java.io.File
 import java.io.InputStreamReader
 import java.util.*
+import kotlin.collections.ArrayList
+import android.content.Context.ACTIVITY_SERVICE
+
+import androidx.core.content.ContextCompat.getSystemService
+
+
+
 
 class HomeFragment : Fragment() {
 
     private var listAdapter: FileListAdapter? = null
-
     private var _binding: FragmentHomeBinding? = null
     private val binding get() = _binding!!
+
+    companion object {
+        private val TAG = javaClass.simpleName
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?, savedInstanceState: Bundle?
     ): View {
+
         _binding = FragmentHomeBinding.inflate(inflater, container, false)
         init()
+
         return binding.root
     }
 
     private fun init() {
         binding.fab.setOnClickListener { onViewClicked() }
-        listAdapter = FileListAdapter()
-        listAdapter!!.addChildClickViewIds(R.id.iv_delete, R.id.iv_edit, R.id.info_container)
-        listAdapter!!.setOnItemChildClickListener { adapter: BaseQuickAdapter<*, *>?, view: View, position: Int ->
-            when (view.id) {
-                R.id.iv_edit -> {
-                    editIni(position)
-                }
-                R.id.iv_delete -> {
-                    deleteFile(position)
-                }
-                R.id.info_container -> {
-                    if (isRunService(context)) {
-                        Toast.makeText(context, R.string.needStopService, Toast.LENGTH_SHORT).show()
-                        return@setOnItemChildClickListener
-                    }
-                    listAdapter!!.selectItem = listAdapter!!.getItem(position)
-                }
-            }
-        }
+        listAdapter = FileListAdapter(getFiles())
         binding.recyclerView.adapter = listAdapter
         binding.recyclerView.layoutManager =
             LinearLayoutManager(context, RecyclerView.VERTICAL, false)
@@ -76,8 +67,14 @@ class HomeFragment : Fragment() {
         syncServiceState()
     }
 
+    private fun getFiles(): ArrayList<File> {
+        val path = Constants.getIniFileParent(context)
+        val files = path.listFiles() ?: arrayOf()
+        return ArrayList(files.toList())
+    }
+
     private fun syncServiceState() {
-        if (!isRunService(context)) {
+        if (!serviceIsRuning(context)) {
             setServiceState(R.color.colorPlay, R.drawable.ic_play_white, R.string.notOpened)
         } else {
             setServiceState(R.color.colorStop, R.drawable.ic_stop_white, R.string.hasOpened)
@@ -85,9 +82,11 @@ class HomeFragment : Fragment() {
     }
 
     private fun setServiceState(color: Int, res: Int, text: Int) {
-        binding.fab.colorNormal = resources.getColor(color)
-        binding.fab.setImageResource(res)
-        binding.tvState.setText(text)
+        context?.let {
+            binding.fab.colorNormal = ContextCompat.getColor(it, color)
+            binding.fab.setImageResource(res)
+            binding.tvState.setText(text)
+        }
     }
 
     override fun onResume() {
@@ -95,104 +94,30 @@ class HomeFragment : Fragment() {
         setData()
     }
 
-    private fun editIni(position: Int) {
-        val item = listAdapter!!.getItem(position)
-        checkPermissions { aBoolean: Boolean? ->
-            if (!aBoolean!!) {
-                Constants.tendToSettings(context)
-                return@checkPermissions
-            }
-            val intent = Intent(context, IniEditActivity::class.java)
-            intent.putExtra(getString(R.string.intent_key_file), item.path)
-            startActivity(intent)
-        }
-    }
-
-    private fun deleteFile(position: Int) {
-        val item = listAdapter!!.getItem(position)
-        Observable.just(item)
-            .map { file: File? -> item.delete() }
-            .subscribeOn(Schedulers.newThread())
-            .observeOn(AndroidSchedulers.mainThread())
-            .subscribe(object : Observer<Boolean> {
-                override fun onSubscribe(d: Disposable) {}
-                override fun onNext(aBoolean: Boolean) {
-                    if (aBoolean) {
-                        listAdapter!!.removeAt(position)
-                    } else {
-                        Toast.makeText(
-                            context,
-                            item.name + getString(R.string.actionDeleteFailed),
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
-                }
-
-                override fun onError(e: Throwable) {
-                    e.printStackTrace()
-                    Toast.makeText(context, e.message, Toast.LENGTH_SHORT).show()
-                }
-
-                override fun onComplete() {}
-            })
-    }
-
+    @SuppressLint("NotifyDataSetChanged")
     private fun setData() {
-        files.subscribeOn(Schedulers.io())
-            .observeOn(AndroidSchedulers.mainThread())
-            .subscribe(object : Observer<List<File>> {
-                override fun onSubscribe(d: Disposable) {
-                    binding.refreshView.isRefreshing = true
-                }
-
-                override fun onNext(files: List<File>) {
-                    binding.refreshView.isRefreshing = false
-                    listAdapter!!.setList(files)
-                }
-
-                override fun onError(e: Throwable) {
-                    e.printStackTrace()
-                }
-
-                override fun onComplete() {
-                    binding.refreshView.isRefreshing = false
-                }
-            })
+        binding.refreshView.isRefreshing = true
+        listAdapter?.let {
+            it.list = getFiles()
+            it.notifyDataSetChanged()
+        }
+        binding.refreshView.isRefreshing = false
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
+        listAdapter = null
     }
 
-    private val files: Observable<List<File>>
-        get() = Observable.create(
-            ObservableOnSubscribe { emitter: ObservableEmitter<List<File>> ->
-                val path = Constants.getIniFileParent(
-                    context
-                )
-                val files = path.listFiles()
-                emitter.onNext(if (files != null) Arrays.asList(*files) else ArrayList())
-                emitter.onComplete()
-            } as ObservableOnSubscribe<List<File>>).subscribeOn(Schedulers.io())
-            .observeOn(AndroidSchedulers.mainThread())
-
-    private fun checkPermissions(consumer: Consumer<Boolean>) {
-        val subscribe = RxPermissions(this)
-            .request(
-                Manifest.permission.WRITE_EXTERNAL_STORAGE,
-                Manifest.permission.READ_EXTERNAL_STORAGE,
-                Manifest.permission.READ_PHONE_STATE
-            )
-            .subscribe(consumer)
-    }
-
-    fun onViewClicked() {
-        if (isRunService(context)) {
+    private fun onViewClicked() {
+        Log.d(TAG, "onViewClicked: ${serviceIsRuning(context)}")
+        if (serviceIsRuning(context)) {
             context?.stopService(Intent(context, FrpcService::class.java))
             setServiceState(R.color.colorPlay, R.drawable.ic_play_white, R.string.notOpened)
         } else {
-            if (listAdapter?.selectItem == null) {
+            val position = listAdapter!!.currentSelection
+            if (position == -1) {
                 Toast.makeText(context, R.string.notSelectIni, Toast.LENGTH_SHORT).show()
                 return
             }
@@ -200,18 +125,26 @@ class HomeFragment : Fragment() {
             val service = Intent(context, FrpcService::class.java)
             service.putExtra(
                 resources.getString(R.string.intent_key_file),
-                listAdapter!!.selectItem!!.path
+                listAdapter!!.list[position].path
             )
             context?.startService(service)
             setServiceState(R.color.colorStop, R.drawable.ic_stop_white, R.string.hasOpened)
         }
     }
-
-    fun isRunService(context: Context?): Boolean {
+//    private fun isServiceRunning(): Boolean {
+//        val manager = getSystemService(ACTIVITY_SERVICE) as ActivityManager?
+//        for (service in manager!!.getRunningServices(Int.MAX_VALUE)) {
+//            if ("com.example.MyNeatoIntentService" == service.service.className) {
+//                return true
+//            }
+//        }
+//        return false
+//    }
+    fun serviceIsRuning(context: Context?): Boolean {
         val manager = context?.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
         for (service in manager.getRunningServices(Int.MAX_VALUE)) {
             val simpleName = FrpcService::class.java.name
-            if (simpleName == service.process) {
+            if (simpleName == service.service.className) {
                 return true
             }
         }

@@ -7,7 +7,7 @@ android {
 
     defaultConfig {
         applicationId "com.frpc.android"
-        minSdkVersion 19
+        minSdkVersion 21
         targetSdkVersion 31
         versionCode 3
         versionName "0.35.1.1"
@@ -80,5 +80,8 @@ dependencies {
     implementation 'com.github.CymChad:BaseRecyclerViewAdapterHelper:3.0.4'
     implementation 'com.github.clans:fab:1.6.4'
     implementation 'com.guolindev.permissionx:permissionx:1.6.1'
-
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.5.0'
+    implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:2.4.0"
+    implementation "androidx.lifecycle:lifecycle-runtime-ktx:2.4.0"
+    implementation 'com.android.support:multidex:1.0.3'
 }

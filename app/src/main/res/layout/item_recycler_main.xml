@@ -22,14 +22,6 @@
         android:orientation="horizontal">
 
 
-        <RadioButton
-            android:id="@+id/btn_radio"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:background="@null"
-            android:clickable="false" />
-
-
         <TextView
             android:id="@+id/tv_name"
             android:layout_width="0dp"

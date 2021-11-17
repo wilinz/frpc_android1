@@ -30,7 +30,7 @@
         android:id="@+id/nestedScrollView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="#333"
+        android:background="@color/colorPrimary"
         app:behavior_hideable="false"
         app:behavior_peekHeight="56dp"
         app:layout_behavior="@string/bottom_sheet_behavior">
