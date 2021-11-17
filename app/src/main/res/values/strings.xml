@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Frpc_Android</string>
+    <string name="app_name">Frpc</string>
     <string name="title_activity_main">FRPC_ANDROID</string>
     <string name="navigation_drawer_open">Open navigation drawer</string>
     <string name="navigation_drawer_close">Close navigation drawer</string>
