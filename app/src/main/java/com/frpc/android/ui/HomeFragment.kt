@@ -30,6 +30,7 @@ import java.io.InputStreamReader
 import java.util.*
 import kotlin.collections.ArrayList
 import android.content.Context.ACTIVITY_SERVICE
+import android.os.Build
 
 import androidx.core.content.ContextCompat.getSystemService
 
@@ -127,7 +128,11 @@ class HomeFragment : Fragment() {
                 resources.getString(R.string.intent_key_file),
                 listAdapter!!.list[position].path
             )
-            context?.startService(service)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context?.startForegroundService(service)
+            }else {
+                context?.startService(service)
+            }
             setServiceState(R.color.colorStop, R.drawable.ic_stop_white, R.string.hasOpened)
         }
     }
