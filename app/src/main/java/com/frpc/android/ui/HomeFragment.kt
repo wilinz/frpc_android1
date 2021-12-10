@@ -1,6 +1,7 @@
 package com.frpc.android.ui
 
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.app.ActivityManager
 import android.content.Context
 import android.content.Intent
@@ -29,12 +30,8 @@ import java.io.File
 import java.io.InputStreamReader
 import java.util.*
 import kotlin.collections.ArrayList
-import android.content.Context.ACTIVITY_SERVICE
+import android.content.Context.MODE_PRIVATE
 import android.os.Build
-
-import androidx.core.content.ContextCompat.getSystemService
-
-
 
 
 class HomeFragment : Fragment() {
@@ -44,7 +41,8 @@ class HomeFragment : Fragment() {
     private val binding get() = _binding!!
 
     companion object {
-        private val TAG = javaClass.simpleName
+        private const val TAG = "HomeFragment"
+        private const val ADD_FILE=0
     }
 
     override fun onCreateView(
@@ -55,21 +53,29 @@ class HomeFragment : Fragment() {
         _binding = FragmentHomeBinding.inflate(inflater, container, false)
         init()
 
+        Log.d(TAG, "onCreateView: ${context?.getExternalFilesDir("")}")
         return binding.root
     }
 
     private fun init() {
+        val defaultSelected = requireContext().getSharedPreferences("defaultSelected", MODE_PRIVATE)
+            .getInt("position", 0)
+
         binding.fab.setOnClickListener { onViewClicked() }
-        listAdapter = FileListAdapter(getFiles())
+        listAdapter = FileListAdapter(getFiles(), defaultSelected)
         binding.recyclerView.adapter = listAdapter
         binding.recyclerView.layoutManager =
             LinearLayoutManager(context, RecyclerView.VERTICAL, false)
-        binding.refreshView.setOnRefreshListener { setData() }
+        binding.refreshView.setOnRefreshListener {
+            binding.refreshView.isRefreshing = true
+            updateData()
+            binding.refreshView.isRefreshing = false
+        }
         syncServiceState()
     }
 
     private fun getFiles(): ArrayList<File> {
-        val path = Constants.getIniFileParent(context)
+        val path = Constants.getIniFileParent(requireContext())
         val files = path.listFiles() ?: arrayOf()
         return ArrayList(files.toList())
     }
@@ -92,21 +98,34 @@ class HomeFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        setData()
+        updateData()
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (resultCode==Activity.RESULT_OK){
+            when(requestCode){
+                ADD_FILE->{
+
+                }
+            }
+        }
     }
 
     @SuppressLint("NotifyDataSetChanged")
-    private fun setData() {
-        binding.refreshView.isRefreshing = true
-        listAdapter?.let {
-            it.list = getFiles()
-            it.notifyDataSetChanged()
-        }
-        binding.refreshView.isRefreshing = false
+    private fun updateData() {
+        listAdapter?.update(getFiles())
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
+        listAdapter?.let {
+            val sp = requireContext().getSharedPreferences("defaultSelected", MODE_PRIVATE)
+                .edit()
+            sp.putInt("position", it.currentSelection)
+            sp.apply()
+        }
+
         _binding = null
         listAdapter = null
     }
@@ -130,7 +149,7 @@ class HomeFragment : Fragment() {
             )
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context?.startForegroundService(service)
-            }else {
+            } else {
                 context?.startService(service)
             }
             setServiceState(R.color.colorStop, R.drawable.ic_stop_white, R.string.hasOpened)

@@ -46,10 +46,10 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
-            R.id.action_new_text ->{
+            R.id.action_new_text -> {
                 checkPermissions {
-                    val intent=Intent(this@MainActivity, IniEditActivity::class.java)
-                    intent.putExtra("isOverwrite",false)
+                    val intent = Intent(this@MainActivity, IniEditActivity::class.java)
+                    intent.putExtra("isOverwrite", false)
                     startActivity(intent)
                 }
             }
@@ -70,8 +70,10 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     private fun checkPermissions(successful: () -> Unit) {
         PermissionX.init(this)
-            .permissions(READ_EXTERNAL_STORAGE,
-                WRITE_EXTERNAL_STORAGE)
+            .permissions(
+                READ_EXTERNAL_STORAGE,
+                WRITE_EXTERNAL_STORAGE
+            )
             .onExplainRequestReason { scope, deniedList ->
                 scope.showRequestReasonDialog(deniedList, "核心基础都是基于这些权限", "确定", "取消")
             }

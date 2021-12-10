@@ -12,17 +12,52 @@ import com.frpc.android.databinding.ItemRecyclerMainBinding
 import com.frpc.android.ui.IniEditActivity
 import java.io.File
 
-class FileListAdapter(var list: ArrayList<File>) :
+class FileListAdapter(var list: ArrayList<File>, defaultSelected: Int) :
     RecyclerView.Adapter<FileListAdapter.FileListViewHolder>() {
 
     companion object {
-        private val TAG = javaClass.simpleName
+        private val TAG = "FileListAdapter"
     }
 
-    var currentSelection = -1
+    var currentSelection = defaultSelected
+        set(value) {
+            field = if (value >= 0) value else 0
+        }
+
+    private fun adjustSelection() {
+        val lastIndex = list.lastIndex
+        if (currentSelection > lastIndex) {
+            currentSelection = lastIndex
+        }
+    }
 
     class FileListViewHolder(val binding: ItemRecyclerMainBinding) :
         RecyclerView.ViewHolder(binding.root)
+
+    fun remove(position: Int) {
+        list[position].delete()
+        list.removeAt(position)
+
+        notifyItemRemoved(position)
+        if (position < currentSelection) {
+            currentSelection -= 1
+        }
+        adjustSelection()
+        notifyItemChanged(currentSelection)
+        Log.d(TAG, "remove: $currentSelection")
+    }
+
+    fun add(list: ArrayList<File>) {
+        list.addAll(list)
+        notifyItemChanged(list.lastIndex)
+        Log.d(TAG, "add: $currentSelection")
+    }
+
+    fun update(list0: ArrayList<File>) {
+        list = list0
+        notifyDataSetChanged()
+        Log.d(TAG, "update: $currentSelection")
+    }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): FileListViewHolder {
 
@@ -44,11 +79,7 @@ class FileListAdapter(var list: ArrayList<File>) :
                 title(text = list[holder.adapterPosition].name)
                 message(text = "确定要删除此文件")
                 positiveButton(text = "确定") {
-                    val position = holder.adapterPosition
-                    list[position].delete()
-                    list.removeAt(position)
-                    notifyItemRemoved(position)
-                    Log.d(TAG, "onCreateViewHolder: size:$itemCount")
+                    remove(holder.adapterPosition)
                 }
                 negativeButton(text = "取消") { }
             }
@@ -60,7 +91,7 @@ class FileListAdapter(var list: ArrayList<File>) :
                 parent.context.getString(R.string.intent_key_file),
                 list[holder.adapterPosition].path
             )
-            intent.putExtra("isOverwrite",true)
+            intent.putExtra("isOverwrite", true)
             parent.context.startActivity(intent)
         }
         return holder

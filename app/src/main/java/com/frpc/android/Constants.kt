@@ -9,11 +9,12 @@ import java.io.*
 object Constants {
     const val INI_PATH = "ini"
     const val INI_FILE_SUF = ".ini"
-    fun getIniFileParentPath(context: Context?): String {
-        return context!!.cacheDir.path + File.separator + INI_PATH
+    fun getIniFileParentPath(context: Context): String {
+        return context.getExternalFilesDir("")!!.path + File.separator + INI_PATH
     }
 
-    fun getIniFileParent(context: Context?): File {
+    fun getIniFileParent(context: Context): File {
+
         val iniFileParentPath = getIniFileParentPath(context)
         val parent = File(iniFileParentPath)
         if (!parent.exists()) parent.mkdirs()

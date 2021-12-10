@@ -110,6 +110,7 @@ class IniEditActivity : AppCompatActivity() {
 
                 val file = File(Constants.getIniFileParent(this@IniEditActivity), filename)
 
+                Log.d(TAG, "actionSave: ${file.path}")
                 val isOverwrite = intent.getBooleanExtra("isOverwrite", false)
                 if (file.exists() && !isOverwrite) {
                     Toast.makeText(this@IniEditActivity, "文件已存在", Toast.LENGTH_SHORT).show()
